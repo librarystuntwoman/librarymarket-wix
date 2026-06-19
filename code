@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSS Feed Carousel</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper/swiper-bundle.min.css">
+    <style>
+        /* Carousel Container */
+        .swiper-container {
+            width: 90%;
+            max-width: 900px;
+            margin: 20px auto;
+          	border-color: #fff;
+            padding: 20px;
+            position: relative;
+            overflow: hidden; /* Prevents overflow */
+        }
+
+        /* Wrapper */
+        .swiper-wrapper {
+            display: flex;
+            align-items: center;
+        }
+
+        /* Carousel Slides */
+        .swiper-slide {
+            text-align: center;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Image Styling */
+        .swiper-slide img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            object-fit: cover;
+        }
+
+        /* Titles */
+        .swiper-slide h2 {
+            font-size: 20px;
+            font-family: Helvetica, Arial, sans-serif;
+            margin: 10px 0;
+            color: #002063;
+        }
+
+        /* Centering Navigation Buttons */
+        .swiper-navigation {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .swiper-button-next, .swiper-button-prev {
+            position: static;
+            transform: none;
+            margin: 0 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 50%;
+            color: #002063;
+            cursor: pointer;
+        }
+
+        .swiper-button-next::after, .swiper-button-prev::after {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Swiper Carousel Container -->
+<div class="swiper-container">
+    <div class="swiper-wrapper">
+        <!-- Slides will be dynamically added here -->
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="swiper-navigation">
+        <div class="swiper-button-prev"></div>
+        <div class="swiper-button-next"></div>
+    </div>
+</div>
+
+<!-- Swiper CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper/swiper-bundle.min.css">
+
+<!-- Swiper JS -->
+<script src="https://cdn.jsdelivr.net/npm/swiper/swiper-bundle.min.js"></script>
+
+<!-- Carousel Script -->
+<script>
+async function fetchRSS() {
+    const rssUrl = "https://turnerfreelibrary.librarymarket.com/events/feed/rss?start=now&end=+2months&program_types=193";
+
+    try {
+        const response = await fetch(rssUrl);
+        const data = await response.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(data, "text/xml");
+        const items = xml.querySelectorAll("item");
+
+        const swiperWrapper = document.querySelector(".swiper-wrapper");
+        swiperWrapper.innerHTML = ""; // clear previous slides
+
+        items.forEach(item => {
+            const title = item.querySelector("title")?.textContent || "No Title";
+            const link = item.querySelector("link")?.textContent || "#";
+
+            // --- IMAGE EXTRACTION ---
+            let image =
+                item.querySelector("enclosure")?.getAttribute("url") ||
+                item.querySelector("media\\:content")?.getAttribute("url") ||
+                extractImageFromDescription(item.querySelector("description")?.textContent);
+
+            if (!image) return; // skip if no image
+
+            // --- ALT TEXT EXTRACTION ---
+            let altText =
+                item.querySelector("media\\:description")?.textContent?.trim() ||
+                item.querySelector("media\\:title")?.textContent?.trim() ||
+                extractFilenameAsAlt(image) ||
+                title;
+
+            altText = altText.replace(/<[^>]*>?/gm, "").replace(/&[^;]+;/g, " ").trim();
+
+            const slide = document.createElement("div");
+            slide.classList.add("swiper-slide");
+            slide.innerHTML = `
+                <a href="${link}" target="_blank" class="tfl-event-link">
+                    <img src="${image}" loading="lazy" alt="${altText}">
+                    <div class="tfl-event-title" role="heading" aria-level="2">${title}</div>
+                </a>
+            `;
+            swiperWrapper.appendChild(slide);
+        });
+
+        // Initialize Swiper safely if slides exist
+        if (document.querySelectorAll(".swiper-slide").length > 0) {
+            new Swiper('.swiper-container', {
+                loop: false,
+                spaceBetween: 20,
+                slidesPerView: 1,
+                centeredSlides: false,
+                watchOverflow: true,
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+                lazy: {
+                    loadPrevNext: true,
+                    loadOnTransitionStart: true,
+                },
+                breakpoints: {
+                    360: { slidesPerView: 1 },
+                    768: { slidesPerView: 2 },
+                    1024: { slidesPerView: 3 },
+                }
+            });
+        }
+
+    } catch (error) {
+        console.error("Error fetching RSS feed:", error);
+    }
+}
+
+// Extract image from description HTML
+function extractImageFromDescription(description) {
+    if (!description) return null;
+    const match = description.match(/<img.*?src=["'](.*?)["']/);
+    return match ? match[1] : null;
+}
+
+// Fallback: use filename as alt text
+function extractFilenameAsAlt(url) {
+    if (!url) return null;
+    const filename = url.split("/").pop().split("?")[0];
+    return filename.replace(/[-_]/g, " ").replace(/\.[^.]+$/, "");
+}
+
+// Fetch RSS and initialize carousel
+fetchRSS();
+</script>
+
+<!-- CSS Styling -->
+<style>
+.swiper-container {
+    width: 90%;
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 20px;
+    background: transparent;
+}
+
+.swiper-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+.swiper-slide {
+    text-align: center;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.swiper-slide img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    object-fit: cover;
+}
+
+.tfl-event-title {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 30px;
+    color: #002063;
+    margin: 10px 0;
+    text-align: center;
+}
+
+.swiper-navigation {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.swiper-button-next, .swiper-button-prev {
+    position: static;
+    transform: none;
+    margin: 0 10px;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    border-radius: 50%;
+    color: #002063;
+    cursor: pointer;
+}
+
+.swiper-button-next::after, .swiper-button-prev::after {
+    font-size: 16px;
+}
+</style>
+
+
+</body>
+</html>
