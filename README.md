@@ -1,0 +1,1 @@
+Code snippet to embed on a Wix website. Pulls an RSS feed from a LibraryMarket calendar and displays featured event titles and images. Images/event names are linked to the respective calendar entry. LibraryMarket has now released an embedding tool, but the current iteration does not support images.
